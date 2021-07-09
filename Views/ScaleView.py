@@ -22,7 +22,10 @@ class ScaleView(tk.Frame):
         self.controller = controller
         self.system = system
         # initial frame
-        self.data_frame()
+        if(self.system.numMode):
+            self.data_frame()
+        else:
+            self.data_frame_perPig()
         self.weight_frame()
         self.table_frame()
         # start weighting
@@ -33,6 +36,7 @@ class ScaleView(tk.Frame):
         self.zeroing()
         self.system.serialthread.start()
         self.read_data()
+        # self.bind("<Button-1>", lambda e: self.change_color(e))
 
 
     # function for getting the data from queue of the serial and calculate the pig's weight
@@ -70,8 +74,9 @@ class ScaleView(tk.Frame):
                             if data < self.system.threshold and data >=0:
                                 self.litter_weight.set(str(round(self.system.fence_list[-1].weight,2))+"kg")
                                 self.litter_weighing_show.configure(bg="white",fg="black")
-                                self.en_sow.configure(font=("Calibri",26),width=10, fg="red")
-                                self.input_sow_id.set("請輸入耳號")
+                                if self.system.numMode == True:
+                                    self.en_sow.configure(font=("Calibri",26),width=10, fg="red") 
+                                    self.input_sow_id.set("請輸入耳號")
                                 self.totalWeight = 0.0
                                 self.clear_table()
                                 self.system.datafile.close()
@@ -113,7 +118,10 @@ class ScaleView(tk.Frame):
 
 
                             # 儲存豬耳號
-                            temp_ID=[self.input_sow_id.get() ,self.input_piglet_id.get()]
+                            if self.system.numMode == True:
+                                temp_ID=[self.input_sow_id.get() ,self.input_piglet_id.get()]
+                            else:
+                                temp_ID=["",self.input_piglet_id.get()]
                             self.system.fence_list[-1].pig_id.append(temp_ID)  # record ID
                             self.tree.insert("","end",values=[self.input_piglet_id.get(), str(last_ave)])  # add pigID and weight in the table
                             self.update_minmax(last_ave)  # update the min and max value
@@ -152,6 +160,8 @@ class ScaleView(tk.Frame):
         print("Stopped!")
         self.system.datafile.close()
         self.system.serialthread.ser.close()
+        self.en_sow.unbind("<Button-1>")
+        self.en_piglet.unbind("<Button-1>")
         print("===STOP WEIGHTING DEBUG PART===")
         print(len(self.system.fence_list))
         for i in range(self.system.fence_list[0].piglet_num):
@@ -189,7 +199,7 @@ class ScaleView(tk.Frame):
 
     # function for outputing the csv file when user presses stoping weighting button
     def output_csv(self):
-        file_path = getcwd() #取路徑的資料
+        file_path = getcwd() #the save path of data 
         with open(file_path + "/" + today() + "weaned weight" +'.csv','a+',encoding="utf-8",newline='') as csv_file:
             write = csv.writer(csv_file)
             header = ["sow id", "piglet id", "weight","fence weight","number born alive"]
@@ -264,14 +274,21 @@ class ScaleView(tk.Frame):
 
     # function for changing color when the user click on the input of data frame
     def change_color(self, event): #點擊widget時，改變其顏色 
-        widget = self.dataFrame.focus_get()
-        if self.en_sow['fg']=="red" and str(widget) == ".!labelframe2.!entry":
-            self.input_sow_id.set("")
-            self.en_sow.configure(font=("Calibri",33),width=8, fg="black")
-        elif self.en_piglet['fg']=="red" and str(widget) == ".!labelframe2.!entry2":
-            self.input_piglet_id.set("")
-            self.en_piglet.configure(font=("Calibri",33),width=8, fg="black")
-
+        try:
+            widget = self.dataFrame.focus_get()
+            if self.system.numMode == True:
+                if self.en_sow['fg']=="red" and str(widget) == ".!frame.!scaleview.!labelframe.!entry":
+                    self.input_sow_id.set("")
+                    self.en_sow.configure(text = '',font=("Calibri",32),width=8, fg="black")
+                elif self.en_piglet['fg']=="red" and str(widget) == ".!frame.!scaleview.!labelframe.!entry2":
+                    self.input_piglet_id.set("")
+                    self.en_piglet.configure(font=("Calibri",32),width=8, fg="black")
+            elif self.system.numMode == False:
+                if self.en_piglet['fg']=="red" and str(widget) == ".!frame.!scaleview.!labelframe.!entry":
+                    self.input_piglet_id.set("")
+                    self.en_piglet.configure(font=("Calibri",32),width=8, fg="black")
+        except:
+            print("Open twice GUI")
 
     # a frame that allows the user to input sowID and pigletID
     def data_frame(self):
@@ -284,7 +301,28 @@ class ScaleView(tk.Frame):
         lb_sow.pack(side=TOP, padx=10, pady=5, anchor=tk.W)
         self.en_sow = tk.Entry(self.dataFrame, textvariable = self.input_sow_id, font=("Calibri",26),width=10, fg="red")
         self.en_sow.pack(side=TOP, padx=10, pady=5,ipady=3)
-        self.bind("<Button-1>", lambda e: self.change_color(e))
+        lb_piglet = tk.Label(self.dataFrame, text="仔豬耳號", font=13)
+        lb_piglet.pack(side=TOP, padx=10, pady=5, anchor=tk.W)
+        self.en_piglet = tk.Entry(self.dataFrame, textvariable = self.input_piglet_id, font=("Calibri",26),width=10, fg="red")
+        self.en_piglet.pack(side=TOP, padx=10, pady=5,ipady=3)
+        self.en_sow.bind("<Button-1>", lambda e: self.change_color(e))
+        self.en_piglet.bind("<Button-1>", lambda e: self.change_color(e))
+        # self.bind_all("<Button-2>", lambda e: self.change_color(e))
+        
+        self.dataFrame.pack(side=LEFT)
+
+    def data_frame_perPig(self):
+        self.dataFrame = ttk.LabelFrame(self, text="耳號設定", relief=RIDGE)
+        
+        # self.input_sow_id, self.input_piglet_id = tk.StringVar(), tk.StringVar()
+        self.input_piglet_id = tk.StringVar()
+        # self.input_sow_id.set("請輸入耳號")
+        self.input_piglet_id.set("請輸入耳號")
+        # lb_sow =  tk.Label(self.dataFrame, text="母豬耳號", font=13)
+        # lb_sow.pack(side=TOP, padx=10, pady=5, anchor=tk.W)
+        # self.en_sow = tk.Entry(self.dataFrame, textvariable = self.input_sow_id, font=("Calibri",26),width=10, fg="red")
+        # self.en_sow.pack(side=TOP, padx=10, pady=5,ipady=3)
+        self.bind_all("<Button-1>", lambda e: self.change_color(e))
         lb_piglet = tk.Label(self.dataFrame, text="仔豬耳號", font=13)
         lb_piglet.pack(side=TOP, padx=10, pady=5, anchor=tk.W)
         self.en_piglet = tk.Entry(self.dataFrame, textvariable = self.input_piglet_id, font=("Calibri",26),width=10, fg="red")

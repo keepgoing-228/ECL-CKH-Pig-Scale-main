@@ -29,6 +29,7 @@ class Scale():
         self.sampleSize = 40
         self.port = ""
         self.autoMode = True
+        self.numMode = True
         self.dataQueue = queue.Queue()
         self.timeQueue = queue.Queue()
         self.serialthread = SerialThread(9600, self.dataQueue, self.timeQueue)

@@ -15,6 +15,8 @@ class StartView(tk.Frame):
         self.sampleSize.set(system.sampleSize)
         self.mode_var = tk.StringVar()
         self.mode_var.set("自動模式")
+        self.num_var = tk.StringVar()
+        self.num_var.set("多頭模式")
 
         self.fetchPorts()
         
@@ -47,6 +49,7 @@ class StartView(tk.Frame):
         self.system.port = self.port.get()
         self.system.sampleSize = self.sampleSize.get()
         self.system.autoMode = True if self.mode_var.get() == "自動模式" else False
+        self.system.numMode = True if self.num_var.get() == "多頭模式" else False
 
 
     def thresholdSetting(self):
@@ -69,6 +72,9 @@ class StartView(tk.Frame):
         
         self.cbb_mode = ttk.Combobox(frame,values=["自動模式", "手動模式"], textvariable = self.mode_var, state="readonly", width=15, font=20)
         self.cbb_mode.pack(side=TOP,fill = X, padx=10, pady=5)
+        # 增加單頭模式or多頭
+        self.num_mode = ttk.Combobox(frame,values=["單頭模式", "多頭模式"], textvariable = self.num_var, state="readonly", width=15, font=20)
+        self.num_mode.pack(side=TOP,fill = X, padx=10, pady=5)
 
         tk.Label(frame,text="取樣數", font=7).pack(side=TOP, padx=10, pady=5, anchor=tk.W)
         sample_size = ttk.Combobox(frame,values=[30, 40, 50], textvariable = self.sampleSize, state="readonly", width=12, font=10)
