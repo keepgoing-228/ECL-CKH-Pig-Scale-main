@@ -119,11 +119,14 @@ class ScaleView(tk.Frame):
 
                             # 儲存豬耳號
                             if self.system.numMode == True:
-                                temp_ID=[self.input_sow_id.get() ,self.input_piglet_id.get()]
+                                correctedSowID = self.revise_ID(self.input_sow_id.get())
+                                correctedPigletID = self.revise_ID(self.input_piglet_id.get())
+                                temp_ID=[correctedSowID , correctedPigletID]
                             else:
-                                temp_ID=["",self.input_piglet_id.get()]
+                                correctedPigletID = self.revise_ID(self.input_piglet_id.get())
+                                temp_ID=["",correctedPigletID]
                             self.system.fence_list[-1].pig_id.append(temp_ID)  # record ID
-                            self.tree.insert("","end",values=[self.input_piglet_id.get(), str(last_ave)])  # add pigID and weight in the table
+                            self.tree.insert("","end",values=[correctedPigletID, str(last_ave)])  # add pigID and weight in the table
                             self.update_minmax(last_ave)  # update the min and max value
                             # claculate pig number
                             if self.system.fence_list[-1].piglet_list is not []:
@@ -308,7 +311,7 @@ class ScaleView(tk.Frame):
         self.en_sow.bind("<Button-1>", lambda e: self.change_color(e))
         self.en_piglet.bind("<Button-1>", lambda e: self.change_color(e))
         # self.bind_all("<Button-2>", lambda e: self.change_color(e))
-        
+
         self.dataFrame.pack(side=LEFT)
 
     def data_frame_perPig(self):
@@ -330,6 +333,18 @@ class ScaleView(tk.Frame):
         
         self.dataFrame.pack(side=LEFT)
 
+    def revise_ID(self, after):
+        ans = after.replace('~','-')
+        ans = ans.replace('隻','-')
+        ans = ans.replace('l','L')
+        ans = ans.replace('d','D')
+        ans = ans.replace('低','D')
+        ans = ans.replace('第','D')
+        ans = ans.replace('地','D')
+        ans = ans.replace('y','Y')
+        ans = ans.replace('外','Y')    
+        ans = ans.replace('。','')
+        return ans
 
     # a frame that shows the table on GUI
     def table_frame(self):
