@@ -4,6 +4,8 @@ def click():
     # print(10+50)
     after = before.get()
     print(after)
+    wrongEntry.delete(0,"end")
+    wrongEntry.insert(0,"請輸入資料")
     print(revise_ID(after))
 
 def revise_ID(after):

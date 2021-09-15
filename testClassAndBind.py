@@ -6,9 +6,12 @@ class App(Tk):
     def __init__(self):
         super().__init__()
         # Entry widget 
-        e1 = Entry(self) 
+        self.text1 = StringVar()
+        e1 = Entry(self, textvariable= self.text1) 
         e1.pack(expand = 1, fill = BOTH) 
-  
+        self.text2 = StringVar()
+        e4 = Entry(self, textvariable= self.text2)
+        e4.pack(fill= BOTH)
         # Button Widget 
         e2 = Button(self, text ="Button") 
         e2.pack(pady = 5) 
@@ -21,6 +24,8 @@ class App(Tk):
     def on_click(self, event):
         widget = self.focus_get() 
         print(widget, "has focus") 
+        value = self.text1.get()
+        print(value)
         # self.entry.delete(5, 'end')
 
 

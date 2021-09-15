@@ -17,7 +17,7 @@ class Fence():
     def __init__(self):
         self.piglet_num = 0
         self.weight = 0
-        self.pig_id = []
+        self.pig_id = []   # 母豬與小豬
         self.piglet_list = []
         p = Pig()
         self.piglet_list.append(p)
@@ -25,7 +25,7 @@ class Fence():
 
 class Scale():
     def __init__(self):
-        self.threshold = 3.0
+        self.threshold = 1.0
         self.sampleSize = 40
         self.port = ""
         self.autoMode = True
