@@ -122,7 +122,6 @@ class StartView(tk.Frame):
     def growwingStageSetting(self):
         window = tk.Toplevel(self, bd=1, padx=3, pady=3)
         window.geometry("230x300")
-
         self.riobtn6 = tk.Radiobutton(window, text="手動單次模式" , variable=self.numValue, value="單次模式", font=10)
         self.riobtn6.pack(side=TOP,fill = X, padx=10, pady=5)
         self.mode_var.set("手動模式")

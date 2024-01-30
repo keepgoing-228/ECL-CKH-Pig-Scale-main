@@ -28,6 +28,7 @@ class ScaleView(tk.Frame):
             self.data_frame_perPig()
         self.weight_frame()
         self.table_frame()
+        # self.setPorts()
         # start weighting
         self.system.datafile = open(today()+'_'+time()+'.log',"w")
         f = Fence()
@@ -539,3 +540,6 @@ class ScaleView(tk.Frame):
         self.tree.pack()
 
         tableFrame.pack(side=RIGHT)
+
+
+        
