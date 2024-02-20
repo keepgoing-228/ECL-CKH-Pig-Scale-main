@@ -22,7 +22,9 @@ class ScaleView(tk.Frame):
         self.controller = controller
         self.system = system
         # initial frame
-        if(self.system.numMode):
+        f = Fence()
+        self.system.fence_list.append(f)
+        if(self.system.recordMode):
             self.data_frame()
         else:
             self.data_frame_perPig()
@@ -31,81 +33,73 @@ class ScaleView(tk.Frame):
         # self.setPorts()
         # start weighting
         self.system.datafile = open(today()+'_'+time()+'.log',"w")
-        f = Fence()
-        self.system.fence_list.append(f)
+        
         self.totalWeight = 0.0
         self.zeroing()
         self.system.serialthread.start()
         self.read_data()
         # self.bind("<Button-1>", lambda e: self.change_color(e))
 
-    
+
     # function for getting the data from queue of the serial and calculate the pig's weight
-    def read_data(self):  #讀取資料
+    def read_data(self):
         value = True
         while self.system.dataQueue.qsize():
             try:  # get data from queue
                 data = self.system.dataQueue.get()
                 currentTime = self.system.timeQueue.get()
-                # print("original data: "+ str(data))
-                data = data.decode().strip("ST,GS,").strip("US,GS,").strip("ST,NT,").strip("ST,TR,").strip("OL,GS")
-                data = data.strip().strip("kg").strip().strip("+").replace(" ", "")
+                #print("original data: "+ str(data))
+                data = data.decode().strip().strip("US,GS,").strip("ST,NT,").strip("ST,TR,").strip("OL,GS")
+                data = data.strip().strip("kg").strip().strip("\r\n").replace(" ", "")
+                #print("after decode data: "+ data)
+                # data = data.decode().strip("ST,GS,").strip("US,GS,").strip("ST,NT,").strip("ST,TR,").strip("OL,GS")
+                # data = data.strip().strip("kg").strip().strip("+").replace(" ", "")
                 if value:
                     try:  # transfer to float
                         data = float(data)
+                        self.system.currentValue = data
                         value = False
                         error = 0
                     except:
                         error = 1
-                        print("read_data except_error")
+                        #print("read_data except_error")
+
                     if not error:
                         self.weight_var.set(data)
                         # local_dt = datetime.utcnow().replace(tzinfo=pytz.utc).astimezone(pytz.timezone('Asia/Taipei'))
                         # currentTime = pytz.timezone('Asia/Taipei').normalize(local_dt).strftime('%H:%M:%S\'%f')[:-3]
                         print("serial: " + currentTime + " " + str(data))
                         self.system.datafile.write(currentTime + " " + str(data) + "\n")
-                        
-                        ##########  Algorithms Part  ##########
-                        if self.system.autoMode == True:
+                        if self.system.operateMode == True:
                             if (data - self.totalWeight) >= self.system.threshold:  #  record weight
                                 self.system.fence_list[-1].piglet_list[-1].weight_list.append(data)
                                 self.system.fence_list[-1].piglet_list[-1].time_list.append(currentTime)
                                 self.pig_weight_show.configure(bg="gray77",fg="gray77")
-                                if self.system.numMode == True:
+                                if self.system.recordMode == True:
                                     self.litter_weighing_show.configure(bg="gray77",fg="gray77")
                             elif (self.totalWeight - data) >= self.system.threshold:  #  pick up pig
                                 if data < self.system.threshold and data >=0:
-                                    if self.system.numMode == True:
+                                    if self.system.recordMode == True:
                                         self.litter_weight.set(str(round(self.system.fence_list[-1].weight,2))+"kg")
                                         self.litter_weighing_show.configure(bg="white",fg="black")
                                         self.en_sow.configure(font=("Calibri",26),width=10, fg="red") 
                                         self.input_sow_id.set("請輸入耳號")
-                                        self.en_piglet.configure(font=("Calibri",26),width=10, fg="red") 
-                                        self.input_piglet_id.set("請輸入耳號")
+                                    f = Fence()
+                                    self.system.fence_list.append(f)
+                                    self.en_piglet.configure(font=("Calibri",26),width=10, fg="red") 
+                                    self.input_piglet_id.set("請輸入耳號")
                                     self.totalWeight = 0.0
                                     self.clear_table()
                                     self.system.datafile.close()
                                     self.system.datafile = open(today()+'_'+time()+'.log',"w")
-                                    f = Fence()
-                                    self.system.fence_list.append(f)
                                     self.zeroing()
-                            
-                            # # Not Auto mode
-                            # if str(self.focus_get()) == ".!frame.!scaleview.!frame.!frame.!button2":
-                            #     if not self.system.autoMode:
-                            #         local_dt = datetime.utcnow().replace(tzinfo=pytz.utc).astimezone(pytz.timezone('Asia/Taipei'))
-                            #         tmp = pytz.timezone('Asia/Taipei').normalize(local_dt).strftime('%H:%M:%S\'%f')[:-3] +  " press_decide_weight_button\n"
-                            #         self.system.datafile.write(tmp) #記錄按按鈕的時間
-
                             # Auto mode: claculate the average
-                            statement = False  #自動/手動決定重量有不同的判斷式
+                            statement = False 
                             if (len(self.system.fence_list[-1].piglet_list[-1].weight_list)) >= self.system.sampleSize:
-                                if self.system.autoMode:
-                                    statement = True
-                            
-                            
+                                statement = True   
                             if statement:
                                 # check if stationary or not
+                                
                                 index = self.system.fence_list[-1].piglet_list[-1].index
                                 temp_list = self.system.fence_list[-1].piglet_list[-1].weight_list[index:index+self.system.sampleSize]
                                 time_list = self.system.fence_list[-1].piglet_list[-1].time_list[index:index+self.system.sampleSize]
@@ -114,9 +108,9 @@ class ScaleView(tk.Frame):
                                 ser_data = pd.Series(temp_list, index=time_list)
                                 self.system.fence_list[-1].piglet_list[-1].kptest.append(1 if kpss_test(ser_data) else 0)  # record the kpss return value
                                 if len(self.system.fence_list[-1].piglet_list[-1].kptest) < 5:
-                                    continue  # less than five times
+                                    pass  # less than five times
                                 if self.system.fence_list[-1].piglet_list[-1].kptest[-5:] != [1]*5:
-                                    continue  # the latest five value is not stationary
+                                    pass  # the latest five value is not stationary
                                 # is stationary! -> calculate the average
                                 temp_list = self.system.fence_list[-1].piglet_list[-1].weight_list[index-4:index+self.system.sampleSize]                                
                                 temp_list = [round(i-self.totalWeight, 2) for i in temp_list]  # minus the former totalWeight to get actual weight
@@ -125,21 +119,20 @@ class ScaleView(tk.Frame):
                                 self.totalWeight += last_ave  # renew totalWeight
                                 self.system.fence_list[-1].weight = self.totalWeight  # record the fence weight
 
+                                
                                 # 儲存豬耳號
-                                if self.system.numMode == True:
+                                correctedPigletID = self.revise_ID(self.input_piglet_id.get())
+                                if self.system.recordMode == True:
                                     correctedSowID = self.revise_ID(self.input_sow_id.get())
-                                    correctedPigletID = self.revise_ID(self.input_piglet_id.get())
                                     temp_ID=[correctedSowID , correctedPigletID]
-                                    
                                 else:
-                                    correctedPigletID = self.revise_ID(self.input_piglet_id.get())
-                                    temp_ID=["",correctedPigletID]
+                                    temp_ID=['-' , correctedPigletID]
+                                    
                                 
                                 self.system.fence_list[-1].pig_id.append(temp_ID)  # record ID
                                 self.tree.insert("","end",values=[correctedPigletID, str(last_ave)])  # add pigID and weight in the table
                                 self.update_minmax(last_ave)  # update the min and max value
-                                # print("temp_ID in read_data:")
-                                # print(temp_ID)
+                                
 
                                 # claculate pig number
                                 if self.system.fence_list[-1].piglet_list is not []:
@@ -153,28 +146,20 @@ class ScaleView(tk.Frame):
                                 # create a new pig, be ready to weight the next pig
                                 p = Pig()
                                 self.system.fence_list[-1].piglet_list.append(p)
-
-                        elif (self.system.autoMode == False):
-                            if (self.totalWeight - data) >= self.system.threshold:  #  pick up pig
-                                if data < self.system.threshold and data >=0:
-                                    if self.system.numMode == True:
-                                        self.litter_weight.set(str(round(self.system.fence_list[-1].weight,2))+"kg")
-                                        self.litter_weighing_show.configure(bg="white",fg="black")
-                                        self.en_sow.configure(font=("Calibri",26),width=10, fg="red") 
-                                        self.input_sow_id.set("請輸入耳號")
-                                        self.en_piglet.configure(font=("Calibri",26),width=10, fg="red") 
-                                        self.input_piglet_id.set("請輸入耳號")
-                                    self.totalWeight = 0.0
-                                    self.clear_table()
-                                    self.system.datafile.close()
-                                    self.system.datafile = open(today()+'_'+time()+'.log',"w")
-                                    f = Fence()
-                                    self.system.fence_list.append(f)
-                                    self.zeroing()
+                                                
 
             except queue.Empty:
                 pass
         self.weight_value_show = self.label_weighing_nowshow.after(100, self.read_data)
+
+    def thresholdCheck(self):
+        data = self.system.currentValue
+        currentTime = self.system.timeQueue.get()
+        print('test')
+        
+        return
+
+
 
 
     # function for removing the value in the GUI table
@@ -197,7 +182,7 @@ class ScaleView(tk.Frame):
         print("Stopped!")
         self.system.datafile.close()
         self.system.serialthread.ser.close()
-        if self.system.numMode == True:
+        if self.system.recordMode == True:
             self.en_sow.unbind("<Button-1>")
         self.en_piglet.unbind("<Button-1>")
         print("===STOP WEIGHTING DEBUG PART===")
@@ -245,9 +230,9 @@ class ScaleView(tk.Frame):
         try:
             with open(file_path + "/" + today() + "weaned weight" +'.csv','a+',encoding="utf-8",newline='') as csv_file:
                 write = csv.writer(csv_file)
-                
-                
-                
+
+                #different function
+
                 print("===OUTPUT CSV DEBUG PART===")
                 for j in range(len(self.system.fence_list)-1):
                     sowHeader = ["Sow ID","","","","","REG","Breed","Birthday(YYYY)","(MM)","(DD)"]
@@ -275,21 +260,14 @@ class ScaleView(tk.Frame):
             tk.messagebox.showerror('錯誤', '請先關掉檔案')
         
         
-
-    
-
     # command for pressing the decide weight button
-    def decide_weight(self):
-        data = self.system.dataQueue.get()
-        data = data.decode().strip("ST,GS,").strip("US,GS,").strip("ST,NT,").strip("ST,TR,").strip("OL,GS")
-        data = data.strip().strip("kg").strip().strip("+").replace(" ", "")
-        data = float(data)
+    def hand_decide_weight(self):
+        data = self.system.currentValue
         currentTime = self.system.timeQueue.get()
         self.btn_decide_weight.focus_set()
         local_dt = datetime.utcnow().replace(tzinfo=pytz.utc).astimezone(pytz.timezone('Asia/Taipei'))
         tmp = pytz.timezone('Asia/Taipei').normalize(local_dt).strftime('%H:%M:%S\'%f')[:-3] +  " press_decide_weight_button\n"
-        self.system.datafile.write(tmp) #記錄按按鈕的時間
-
+        self.system.datafile.write(tmp) #record the time of pressing btn
 
         self.system.fence_list[-1].piglet_list[-1].weight_list.append(data)
         self.system.fence_list[-1].piglet_list[-1].time_list.append(currentTime)
@@ -303,32 +281,34 @@ class ScaleView(tk.Frame):
 
         self.piglet_weight.set(str(round(self.system.fence_list[-1].piglet_list[-1].weight,2))+"kg")
         self.pig_weight_show.configure(bg="white",fg="black")
-        if self.system.numMode == True:
-            # self.litter_weight.set(str(round(self.system.fence_list[-1].weight,2))+"kg")
-            self.litter_weighing_show.configure(bg="gray77",fg="gray77")
+
         # 儲存豬耳號
-        if self.system.numMode == True:
+        correctedPigletID = self.revise_ID(self.input_piglet_id.get())
+        if self.system.recordMode == True:
             correctedSowID = self.revise_ID(self.input_sow_id.get())
-            correctedPigletID = self.revise_ID(self.input_piglet_id.get())
             temp_ID=[correctedSowID , correctedPigletID]
-            # print(temp_ID)
         else:
-            correctedPigletID = self.revise_ID(self.input_piglet_id.get())
-            temp_ID=["",correctedPigletID]
+            temp_ID=['-' , correctedPigletID]
+            
+        
         self.system.fence_list[-1].pig_id.append(temp_ID)  # record ID
-        self.tree.insert("","end",values=[correctedPigletID, data])  # add pigID and weight in the table
-        self.update_minmax(data)
+        self.tree.insert("","end",values=[correctedPigletID, str(data)])  # add pigID and weight in the table
+        self.update_minmax(data)  # update the min and max value
+        
+
         # claculate pig number
         if self.system.fence_list[-1].piglet_list is not []:
             self.piglet_save_num.set("已存豬數："+str(len(self.system.fence_list[-1].piglet_list)))
             self.system.fence_list[-1].piglet_num = len(self.system.fence_list[-1].piglet_list)
         # show information on GUI
+        self.piglet_weight.set(str(round(self.system.fence_list[-1].piglet_list[-1].weight,2))+"kg")
+        self.pig_weight_show.configure(bg="white",fg="black")
         self.en_piglet.configure(font=("Calibri",26),width=10, fg="red")
         self.input_piglet_id.set("請輸入耳號")
         # create a new pig, be ready to weight the next pig
         p = Pig()
-        self.system.fence_list[-1].piglet_list.append(p)   
-
+        self.system.fence_list[-1].piglet_list.append(p)
+        print('test')
 
 
     # command for zeroing the scale
@@ -354,8 +334,8 @@ class ScaleView(tk.Frame):
         btn_zero.pack(side=RIGHT, pady=4, anchor=tk.E)
         btn_delete = tk.Button(sub_frm, text="刪除上一筆資料", command=self.delete_last_data, font=20)
         btn_delete.pack(side=RIGHT, padx=5, pady=4, anchor=tk.E)
-        if self.system.autoMode == False:
-            self.btn_decide_weight = tk.Button(sub_frm,text="決定重量", font=10, command=self.decide_weight)
+        if self.system.operateMode == False:
+            self.btn_decide_weight = tk.Button(sub_frm,text="決定重量", font=10, command=self.hand_decide_weight)
             self.btn_decide_weight.pack(side=RIGHT, padx=5, pady=4, anchor=tk.E)
         sub_frm.pack(side=TOP, fill=X)
         
@@ -369,7 +349,7 @@ class ScaleView(tk.Frame):
         self.pig_weight_show = tk.Label(weightFrame, textvariable=self.piglet_weight,font=("Calibri",60),bd=1,anchor=tk.W,bg="gray77",fg="gray77",padx=10,width=11,height=1)            
         self.pig_weight_show.pack(side=TOP,pady=5)
         
-        if self.system.numMode == True:
+        if self.system.recordMode == True:
             lb_litter_weighing = tk.Label(weightFrame, text="總重",font=20)
             lb_litter_weighing.pack(side=TOP, anchor=tk.W)
             self.litter_weighing_show = tk.Label(weightFrame, textvariable=self.litter_weight,font=("Calibri",60),bd=1,anchor=tk.W,bg="gray77",fg="gray77",padx=10,width=11,height=1)
@@ -405,11 +385,11 @@ class ScaleView(tk.Frame):
             tk.messagebox.showerror('提示', '請先拿出豬隻')
             
     # function for changing color when the user click on the input of data frame
-    def change_color(self, event): #點擊widget時，改變其顏色 
+    def change_color(self, event):
         try:
             widget = self.dataFrame.focus_get()
             # print(widget)
-            if self.system.numMode == True:
+            if self.system.recordMode == True:
                 if self.en_sow['fg']=="red" and  str(widget) == ("."or".!frame.!scaleview.!labelframe.!entry"):
                     self.en_sow.delete(0,"end")
                     # self.input_sow_id.set("")
@@ -419,7 +399,7 @@ class ScaleView(tk.Frame):
                     self.en_piglet.delete(0,"end")
                     self.en_piglet.configure(font=("Calibri",32),width=8, fg="black")
                     
-            elif self.system.numMode == False:
+            elif self.system.recordMode == False:
                 if self.en_piglet["fg"]=="red" and str(widget) == ".!frame.!scaleview.!labelframe.!entry":
                     self.input_piglet_id.set("")
                     self.en_piglet.configure(font=("Calibri",32),width=8, fg="black")
@@ -468,9 +448,9 @@ class ScaleView(tk.Frame):
 
 
     def revise_echo(self):
-        if self.system.numMode == True:
+        if self.system.recordMode == True:
             correctedSowID = self.revise_ID(self.input_sow_id.get())
-            correctedPigletID = self.revise_ID(self.input_piglet_id.get())  
+            correctedPigletID = self.revise_ID(self.input_piglet_id.get()) 
             self.en_sow.delete(0,"end")
             self.en_sow.insert(0, correctedSowID)                              
         else:

@@ -17,7 +17,7 @@ class Fence():
     def __init__(self):
         self.piglet_num = 0
         self.weight = 0
-        self.pig_id = []   # 母豬與小豬
+        self.pig_id = []
         self.piglet_list = []
         p = Pig()
         self.piglet_list.append(p)
@@ -28,11 +28,12 @@ class Scale():
         self.threshold = 1.0
         self.sampleSize = 40
         self.port = ""
-        self.autoMode = True
-        self.numMode = True
+        self.recordMode = True
+        self.operateMode = True
         self.dataQueue = queue.Queue()
         self.timeQueue = queue.Queue()
         self.serialthread = SerialThread(9600, self.dataQueue, self.timeQueue)
         self.fence_list = []
+        self.currentValue = 0
 
 

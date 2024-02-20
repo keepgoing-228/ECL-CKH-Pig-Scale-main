@@ -13,15 +13,10 @@ class StartView(tk.Frame):
         self.port = tk.StringVar()
         self.sampleSize = tk.IntVar()
         self.sampleSize.set(system.sampleSize)
-        self.stage_var = tk.StringVar()
-        self.stage_var.set("三周齡")
-        self.mode_var = tk.StringVar()
-        self.mode_var.set("自動模式")
-        self.num_var = tk.StringVar()
-        self.num_var.set("累加模式")
-        self.modeValue = tk.StringVar()
-        self.numValue = tk.StringVar()
-
+        self.operateMode = tk.StringVar()
+        self.operateMode.set("自動模式")
+        self.recordMode = tk.StringVar()
+        self.recordMode.set("窩重")
         self.fetchPorts()
         
         weightBtn = tk.Button(self, text="開始秤重", font=20,
@@ -53,13 +48,12 @@ class StartView(tk.Frame):
     def variableSetting(self):
         self.system.port = self.port.get()
         self.system.sampleSize = self.sampleSize.get()
-
-        self.system.autoMode = True if self.mode_var.get() == "自動模式" else False
-        self.system.numMode = True if self.num_var.get() == "累加模式" else False
+        self.system.operateMode = True if self.operateMode.get() == "自動模式" else False
+        self.system.recordMode = True if self.recordMode.get() == "窩重" else False
 
 
     def thresholdSetting(self):
-        temp = self.system.threshold
+        temp = self.system.threshold  #default = 1
         user_input = sd.askfloat("設定儲存鎖定值", "請輸入儲存鎖定值")
         if user_input is not None:
             self.system.threshold = float(user_input)
@@ -69,63 +63,36 @@ class StartView(tk.Frame):
 
     def advanceSetting(self):
         window = tk.Toplevel(self, bd=1, padx=3, pady=3)
-        window.geometry("230x320")
+        window.geometry("320x350")
         frame = ttk.LabelFrame(window,text="進階設定")
         frame.place(x=15,y=10)
 
-        frame2 = ttk.LabelFrame(frame,text="豬隻階段設定")
+        frame2 = ttk.LabelFrame(frame,text="記錄模式")
         frame2.pack()
-        self.stage_mode = tk.Button(frame2, text="三周齡/離乳", font=20, command=self.weaningStageSetting)
-        self.stage_mode.pack(side=TOP,fill = X, padx=10, pady=5)
-        self.stage_mode = tk.Button(frame2, text="保育", font=20, command=self.nurseryStageSetting)
-        self.stage_mode.pack(side=TOP,fill = X, padx=10, pady=5)
-        self.stage_mode = tk.Button(frame2, text="生長/肥育", font=20, command=self.growwingStageSetting)
-        self.stage_mode.pack(side=TOP,fill = X, padx=10, pady=5)
+        self.radio_btn1 = tk.Radiobutton(frame2, text="窩重＋母豬", font=20,variable=self.recordMode, value="窩重")
+        self.radio_btn1.pack(side=LEFT,fill = X, padx=28, pady=5)
+        self.radio_btn1.select()
+        self.radio_btn2 = tk.Radiobutton(frame2, text="個別重", font=20,variable=self.recordMode, value="個別重")
+        self.radio_btn2.pack(side=TOP,fill = X, padx=28, pady=5)
+
+        frame3 = ttk.LabelFrame(frame,text="操作模式")
+        frame3.pack()
+        self.radio_btn3 = tk.Radiobutton(frame3, text="自動(超過鎖定值並平衡後數秒會紀錄)", font=20,variable=self.operateMode, value="自動模式")
+        self.radio_btn3.pack(side=TOP,fill = X, padx=10, pady=5)
+        self.radio_btn3.select()
+        self.radio_btn4 = tk.Radiobutton(frame3, text="手動", font=20,variable=self.operateMode, value="手動模式")
+        self.radio_btn4.pack(side=TOP,fill = X, padx=10, pady=5)
         
         tk.Label(frame,text="取樣數", font=7).pack(side=TOP, padx=10, pady=5, anchor=tk.W)
         sample_size = ttk.Combobox(frame,values=[30, 40, 50], textvariable = self.sampleSize, state="readonly", width=12, font=10)
         sample_size.pack(side=TOP, fill = X, padx=10, pady=5)
 
-
-    def weaningStageSetting(self):
-        window = tk.Toplevel(self, bd=1, padx=3, pady=3)
-        window.geometry("230x300")
-        thresholdBtn = tk.Button(window,text="設定儲存鎖定值",  command=self.thresholdSetting, font=12)
+        thresholdBtn = tk.Button(frame,text="設定儲存鎖定值",  command=self.thresholdSetting, font=12)
         thresholdBtn.pack(side=TOP, fill = X, padx=10, pady=5)
-        self.riobtn1 = tk.Radiobutton(window, text="自動批次模式" , variable=self.modeValue, value="自動模式", font=10)
-        self.riobtn1.pack(side=TOP,fill = X, padx=10, pady=5)
-        self.riobtn2 = tk.Radiobutton(window, text="手動批次模式" , variable=self.modeValue, value="手動模式", font=10)
-        self.riobtn2.pack(side=TOP,fill = X, padx=10, pady=5)
-        self.riobtn3 = tk.Radiobutton(window, text="手動窩重模式" , variable=self.modeValue, value="新設定", font=10)
-        self.riobtn3.pack(side=TOP,fill = X, padx=10, pady=5)
-        self.riobtn1.select()
-        if(self.modeValue=="新設定"):
-            self.mode_var.set("手動模式")
-            self.num_var.set("單次模式")
-        self.mode_var.set(self.modeValue.get())
-        
-        
 
-    def nurseryStageSetting(self):
-        window = tk.Toplevel(self, bd=1, padx=3, pady=3)
-        window.geometry("230x300")
-        self.riobtn4 = tk.Radiobutton(window, text="手動單次模式" , variable=self.numValue, value="單次模式", font=10)
-        self.riobtn4.pack(side=TOP,fill = X, padx=10, pady=5)
-        self.riobtn5 = tk.Radiobutton(window, text="手動批次模式" , variable=self.numValue, value="累加模式", font=10)
-        self.riobtn5.pack(side=TOP,fill = X, padx=10, pady=5)
-        self.mode_var.set("手動模式")
-        self.riobtn4.select()
-        self.num_var.set(self.numValue.get())
-
-        
-    
-    def growwingStageSetting(self):
-        window = tk.Toplevel(self, bd=1, padx=3, pady=3)
-        window.geometry("230x300")
-        self.riobtn6 = tk.Radiobutton(window, text="手動單次模式" , variable=self.numValue, value="單次模式", font=10)
-        self.riobtn6.pack(side=TOP,fill = X, padx=10, pady=5)
-        self.mode_var.set("手動模式")
-        self.num_var.set(self.numValue.get())
+        """#testMode
+        testModeBtn = tk.Button(frame,text="test",  command=self.testMode, font=12)
+        testModeBtn.pack(side=TOP, fill = X, padx=10, pady=5)"""
 
 
     def checkPort(self):
@@ -135,3 +102,13 @@ class StartView(tk.Frame):
             tk.messagebox.showwarning(title="錯誤", message='請選擇正確串口埠')
             return
         self.controller.show_frame("ScaleView", self.system)
+
+
+
+    def testMode(self):
+        print(self.operateMode.get())
+        print(self.recordMode.get())
+        self.system.operateMode = True if self.operateMode.get() == "自動模式" else False
+        self.system.recordMode = True if self.recordMode.get() == "窩重" else False
+        print(self.system.operateMode)
+        print(self.system.recordMode)
